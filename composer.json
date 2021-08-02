@@ -1,0 +1,40 @@
+{
+    "name": "hyqo/container",
+    "description": "Dependency injection container",
+    "keywords": [
+        "dependency injection",
+        "dependency injection container"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Oleg Sedinkin",
+            "email": "a@aw.wtf"
+        }
+    ],
+    "require": {
+        "php": "7.2.*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^8"
+    },
+    "autoload": {
+        "psr-4": {
+            "Hyqo\\Container\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Hyqo\\Container\\Test\\": "tests"
+        },
+        "files": [
+            "tests/Fixtures/closure.php"
+        ]
+    },
+    "minimum-stability": "dev",
+    "extra": {
+        "branch-alias": {
+            "dev-main": "0.1.x-dev"
+        }
+    }
+}
