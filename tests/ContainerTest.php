@@ -128,23 +128,3 @@ class  ContainerTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals($object, $this->container->get('object'));
     }
 }
-
-
-//
-//it(
-//    'can make service',
-//    function () {
-//        $container = new \Hyqo\Container\Container();
-//
-//        assertInstanceOf(Boo::class, $container->make(Foo::class, ['test' => 1, 'a' => 1]));
-//    }
-//);
-//
-//it(
-//    'can get service',
-//    function () {
-//        $container = new \Hyqo\Container\Container();
-//
-//        assertInstanceOf(Boo::class, $container->get(Boo::class));
-//    }
-//);
