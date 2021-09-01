@@ -1,4 +1,7 @@
-# Container [![Packagist Version](https://img.shields.io/packagist/v/hyqo/container)](https://packagist.org/packages/hyqo/container)
+# Container
+![Packagist Version](https://img.shields.io/packagist/v/hyqo/container?style=flat-square)
+![Packagist PHP Version Support](https://img.shields.io/packagist/php-v/hyqo/container?style=flat-square)
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/hyqo/container/run-tests?style=flat-square)
 
 Dependency injection container
 
