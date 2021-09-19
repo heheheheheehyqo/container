@@ -15,9 +15,21 @@ class Container
     /** @var Reflection */
     private $reflection;
 
+    /** @var null|self */
+    private static $instance = null;
+
     public function __construct()
     {
         $this->reflection = new Reflection();
+    }
+
+    public static function getInstance(): self
+    {
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+
+        return self::$instance;
     }
 
     public function bind(string $class, string $realisation)

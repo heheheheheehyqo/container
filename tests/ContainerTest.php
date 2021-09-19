@@ -20,6 +20,11 @@ class  ContainerTest extends \PHPUnit\Framework\TestCase
         $this->assertInstanceOf(Container::class, $this->container);
     }
 
+    public function test_container_instance(): void
+    {
+        $this->assertEquals(Container::getInstance(), Container::getInstance());
+    }
+
     public function test_make_a_service(): void
     {
         $bar = $this->container->make(Bar::class);
