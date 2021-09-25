@@ -7,8 +7,7 @@ use Hyqo\Container\Test\Fixtures\{Call, ClassInterface, Foo, Bar, Baz, NoConstru
 
 class  ContainerTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var Container */
-    private $container;
+    private Container $container;
 
     protected function setUp(): void
     {
@@ -121,7 +120,7 @@ class  ContainerTest extends \PHPUnit\Framework\TestCase
 
         $bar = $this->container->make(ClassInterface::class);
 
-        $this->assertInstanceOf(Bar::class, $bar);
+        $this->assertInstanceOf(ClassInterface::class, $bar);
     }
 
     public function test_set(): void

@@ -75,7 +75,7 @@ class Bar
 }
 ```
 
-Create the object:
+Create object:
 ```php
 use \Hyqo\Container\Container;
 

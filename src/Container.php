@@ -1,22 +1,16 @@
 <?php
 
-
 namespace Hyqo\Container;
-
 
 class Container
 {
-    /** @var array */
-    private $services = [];
+    private array $services = [];
 
-    /** @var array */
-    private $aliases = [];
+    private array $aliases = [];
 
-    /** @var Reflection */
-    private $reflection;
+    private Reflection $reflection;
 
-    /** @var null|self */
-    private static $instance = null;
+    private static ?self $instance = null;
 
     public function __construct()
     {
@@ -25,14 +19,10 @@ class Container
 
     public static function getInstance(): self
     {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
-
-        return self::$instance;
+        return self::$instance ??= new self();
     }
 
-    public function bind(string $class, string $realisation)
+    public function bind(string $class, string $realisation): void
     {
         $this->aliases[$class] = $realisation;
     }
@@ -42,15 +32,21 @@ class Container
         return $this->services[$classname] = $instance;
     }
 
+    /**
+     * @template T
+     * @param class-string<T> $classname
+     * @return T
+     */
     public function get(string $classname): object
     {
-        if (isset($this->services[$classname])) {
-            return $this->services[$classname];
-        }
-
-        return $this->services[$classname] = $this->make($classname);
+        return $this->services[$classname] ??= $this->make($classname);
     }
 
+    /**
+     * @template T
+     * @param class-string<T> $classname
+     * @return T
+     */
     public function make(string $classname, array $arguments = []): object
     {
         $reflection = $this->reflection->getReflectionClass($this->aliases[$classname] ?? $classname);
@@ -70,19 +66,13 @@ class Container
         return $reflection->newInstance();
     }
 
-    /**
-     * @param callable $callable
-     * @param array $arguments
-     *
-     * @return false|mixed
-     */
-    public function call(callable $callable, array $arguments = [])
+    public function call(callable $callable, array $arguments = []): mixed
     {
         $reflection = $this->reflection->getReflectionCallable($callable);
 
         $resolvedDependencies = $this->resolveDependencies($reflection, $arguments);
 
-        return call_user_func($callable, ...$resolvedDependencies);
+        return $callable(...$resolvedDependencies);
     }
 
     private function resolveDependencies(\ReflectionFunctionAbstract $function, array $arguments = []): \Generator
@@ -90,8 +80,8 @@ class Container
         foreach ($function->getParameters() as $parameter) {
             if (isset($arguments[$parameter->getName()])) {
                 yield $arguments[$parameter->getName()];
-            } elseif ($parameter->getClass()) {
-                yield $this->get($parameter->getClass()->getName());
+            } elseif (($type = $parameter->getType()) && !$type->isBuiltin()) {
+                yield $this->get($type->getName());
             } elseif ($parameter->isDefaultValueAvailable()) {
                 yield $parameter->getDefaultValue();
             } elseif ($parameter->getDeclaringClass()) {

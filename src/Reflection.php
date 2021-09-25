@@ -6,17 +6,12 @@ namespace Hyqo\Container;
 
 class Reflection
 {
-    /** @var array */
-    private static $reflectionClass = [];
+    private static array $reflectionClass = [];
 
     public function getReflectionClass(string $classname): \ReflectionClass
     {
         try {
-            if (isset(self::$reflectionClass[$classname])) {
-                return self::$reflectionClass[$classname];
-            }
-
-            return self::$reflectionClass[$classname] = new \ReflectionClass($classname);
+            return self::$reflectionClass[$classname] ??= new \ReflectionClass($classname);
         } catch (\ReflectionException $e) {
             throw new \InvalidArgumentException($e->getMessage());
         }
