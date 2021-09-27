@@ -2,6 +2,9 @@
 
 namespace Hyqo\Container;
 
+use JetBrains\PhpStorm\Deprecated;
+use JetBrains\PhpStorm\Pure;
+
 class Container
 {
     private array $services = [];
@@ -12,11 +15,13 @@ class Container
 
     private static ?self $instance = null;
 
+    #[Pure]
     public function __construct()
     {
         $this->reflection = new Reflection();
     }
 
+    #[Deprecated]
     public static function getInstance(): self
     {
         return self::$instance ??= new self();
