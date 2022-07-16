@@ -7,7 +7,7 @@ use Hyqo\Container\Test\Fixtures\{Call, ClassInterface, Foo, Bar, Baz, NoConstru
 
 class  ContainerTest extends \PHPUnit\Framework\TestCase
 {
-    private Container $container;
+    private $container;
 
     protected function setUp(): void
     {

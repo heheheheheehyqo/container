@@ -8,5 +8,3 @@ function getClosure(): \Closure
         return $foo;
     };
 }
-
-;

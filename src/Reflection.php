@@ -6,21 +6,34 @@ namespace Hyqo\Container;
 
 class Reflection
 {
-    private static array $reflectionClass = [];
+    /**
+     * @var array<string, \ReflectionClass<object>>
+     */
+    private static $reflectionClass = [];
 
+    /**
+     * @template T of object
+     * @param class-string<T> $classname
+     * @return \ReflectionClass<T>
+     */
     public function getReflectionClass(string $classname): \ReflectionClass
     {
         try {
-            return self::$reflectionClass[$classname] ??= new \ReflectionClass($classname);
+            if (!array_key_exists($classname, self::$reflectionClass)) {
+                self::$reflectionClass[$classname] = new \ReflectionClass($classname);
+            }
+
+            return self::$reflectionClass[$classname];
         } catch (\ReflectionException $e) {
             throw new \InvalidArgumentException($e->getMessage());
         }
     }
 
     /**
+     * @param callable|array{object,string} $callable
      * @throws \ReflectionException
      */
-    public function getReflectionCallable(callable $callable): \ReflectionFunctionAbstract
+    public function getReflectionCallable($callable): \ReflectionFunctionAbstract
     {
         switch (true) {
             case (is_array($callable) && count($callable) === 2):
@@ -35,8 +48,9 @@ class Reflection
 
             case (is_string($callable)):
             case ($callable instanceof \Closure):
-            default:
                 return new \ReflectionFunction($callable);
+            default:
+                throw new \RuntimeException();
         }
     }
 }

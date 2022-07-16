@@ -7,4 +7,8 @@ class Foo
     public function __construct(Bar $boo)
     {
     }
+
+    public function foo(){
+
+}
 }

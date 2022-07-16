@@ -2,34 +2,52 @@
 
 namespace Hyqo\Container;
 
-use JetBrains\PhpStorm\Deprecated;
-use JetBrains\PhpStorm\Pure;
+use Hyqo\Container\Exception\ContainerException;
+use Hyqo\Container\Exception\NotFoundException;
+use Psr\Container\ContainerInterface;
 
-class Container
+class Container implements ContainerInterface
 {
-    private array $services = [];
+    /** @var array<string,object> */
+    protected $services = [];
 
-    private array $aliases = [];
+    /** @var array<class-string,class-string> */
+    protected $aliases = [];
 
-    private Reflection $reflection;
+    /** @var Reflection */
+    protected $reflection;
 
-    private static ?self $instance = null;
+    /** @var null|static */
+    protected static $instance = null;
 
-    #[Pure]
-    public function __construct()
+    final public function __construct()
     {
         $this->reflection = new Reflection();
     }
 
-    #[Deprecated]
+    /**
+     * @return static
+     * @deprecated
+     */
     public static function getInstance(): self
     {
-        return self::$instance ??= new self();
+        if (null === self::$instance) {
+            self::$instance = new static();
+        }
+
+        return self::$instance;
     }
 
-    public function bind(string $class, string $realisation): void
+    /**
+     * @param class-string $interface
+     * @param class-string $realisation
+     * @return $this
+     */
+    public function bind(string $interface, string $realisation): self
     {
-        $this->aliases[$class] = $realisation;
+        $this->aliases[$interface] = $realisation;
+
+        return $this;
     }
 
     public function set(string $classname, object $instance): object
@@ -39,25 +57,32 @@ class Container
 
     /**
      * @template T
-     * @param class-string<T> $classname
-     * @return T
+     * @param class-string<T> $id
+     * @return T|mixed
      */
-    public function get(string $classname): object
+    public function get(string $id)
     {
-        return $this->services[$classname] ??= $this->make($classname);
+        if (array_key_exists($id, $this->services)) {
+            return $this->services[$id];
+        }
+
+        return $this->services[$id] = $this->make($id);
     }
 
     /**
      * @template T
      * @param class-string<T> $classname
-     * @return T
+     * @return T|mixed
+     * @throws ContainerException
      */
     public function make(string $classname, array $arguments = []): object
     {
-        $reflection = $this->reflection->getReflectionClass($this->aliases[$classname] ?? $classname);
+        $classname = $this->aliases[$classname] ?? $classname;
+
+        $reflection = $this->reflection->getReflectionClass($classname);
 
         if (!$reflection->isInstantiable()) {
-            throw new \InvalidArgumentException("Can not instantiate $classname");
+            throw new ContainerException("Can not instantiate $classname");
         }
 
         $constructor = $reflection->getConstructor();
@@ -65,19 +90,41 @@ class Container
         if ($constructor) {
             $resolvedDependencies = $this->resolveDependencies($constructor, $arguments);
 
-            return $reflection->newInstance(...$resolvedDependencies);
+            try {
+                return $reflection->newInstance(...$resolvedDependencies);
+            } catch (\ReflectionException $e) {
+                throw new ContainerException($e->getMessage());
+            }
         }
 
-        return $reflection->newInstance();
+        try {
+            return $reflection->newInstanceWithoutConstructor();
+        } catch (\ReflectionException $e) {
+            throw new ContainerException($e->getMessage());
+        }
     }
 
-    public function call(callable $callable, array $arguments = []): mixed
+    /**
+     * @param callable|array{object,string} $callable
+     *
+     * @throws NotFoundException
+     * @throws ContainerException
+     */
+    public function call($callable, array $arguments = [])
     {
-        $reflection = $this->reflection->getReflectionCallable($callable);
+        try {
+            $reflection = $this->reflection->getReflectionCallable($callable);
+        } catch (\ReflectionException $e) {
+            throw new NotFoundException($e->getMessage());
+        }
 
         $resolvedDependencies = $this->resolveDependencies($reflection, $arguments);
 
-        return $callable(...$resolvedDependencies);
+        if (is_callable($callable)) {
+            return $callable(...$resolvedDependencies);
+        }
+
+        throw new ContainerException('The value passed to parameter $callable must be callable');
     }
 
     private function resolveDependencies(\ReflectionFunctionAbstract $function, array $arguments = []): \Generator
@@ -85,8 +132,10 @@ class Container
         foreach ($function->getParameters() as $parameter) {
             if (isset($arguments[$parameter->getName()])) {
                 yield $arguments[$parameter->getName()];
-            } elseif (($type = $parameter->getType()) && !$type->isBuiltin()) {
-                yield $this->get($type->getName());
+            } elseif (($type = $parameter->getType()) && $type instanceof \ReflectionNamedType && !$type->isBuiltin()) {
+                $classname = $type->getName();
+
+                yield $this->get($classname);
             } elseif ($parameter->isDefaultValueAvailable()) {
                 yield $parameter->getDefaultValue();
             } elseif ($parameter->getDeclaringClass()) {
