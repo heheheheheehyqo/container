@@ -4,11 +4,15 @@ namespace Hyqo\Container\Test\Fixtures;
 
 class Foo
 {
-    public function __construct(Bar $boo)
+    private $bar;
+
+    public function __construct(Bar $bar)
     {
+        $this->bar = $bar;
     }
 
-    public function foo(){
-
-}
+    public function print(): string
+    {
+        return $this->bar->print();
+    }
 }

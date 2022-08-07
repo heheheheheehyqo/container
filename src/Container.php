@@ -3,13 +3,21 @@
 namespace Hyqo\Container;
 
 use Hyqo\Container\Exception\ContainerException;
+use Hyqo\Container\Exception\CyclicDependencyException;
 use Hyqo\Container\Exception\NotFoundException;
+use Hyqo\Container\Resolver\FunctionResolver;
+use Hyqo\Container\Resolver\MethodResolver;
 use Psr\Container\ContainerInterface;
 
 class Container implements ContainerInterface
 {
     /** @var array<string,object> */
-    protected $services = [];
+    protected $storage;
+
+    protected $beingResolved = [];
+
+    /** @var array<class-string,array> */
+    protected $configuration = [];
 
     /** @var array<class-string,class-string> */
     protected $aliases = [];
@@ -17,12 +25,29 @@ class Container implements ContainerInterface
     /** @var Reflection */
     protected $reflection;
 
-    /** @var null|static */
+    /** @var MethodResolver */
+    protected $methodResolver;
+
+    /** @var FunctionResolver */
+    protected $functionResolver;
+
+    /**
+     * @var null|static
+     * @deprecated
+     */
     protected static $instance = null;
 
     final public function __construct()
     {
         $this->reflection = new Reflection();
+
+        $this->methodResolver = new MethodResolver($this);
+        $this->functionResolver = new FunctionResolver($this);
+
+        $this->storage = [
+            self::class => $this,
+            ContainerInterface::class => $this
+        ];
     }
 
     /**
@@ -50,9 +75,29 @@ class Container implements ContainerInterface
         return $this;
     }
 
-    public function set(string $classname, object $instance): object
+    /**
+     * @return $this
+     */
+    public function construct(string $classname, array $arguments): self
     {
-        return $this->services[$classname] = $instance;
+        $this->configuration[$classname] = $arguments;
+
+        return $this;
+    }
+
+    public function getConfiguration(string $classname): array
+    {
+        return $this->configuration[$classname] ?? [];
+    }
+
+    public function set(string $id, object $instance): object
+    {
+        return $this->storage[$id] = $instance;
+    }
+
+    public function has(string $id): bool
+    {
+        return array_key_exists($id, $this->storage);
     }
 
     /**
@@ -62,11 +107,11 @@ class Container implements ContainerInterface
      */
     public function get(string $id)
     {
-        if (array_key_exists($id, $this->services)) {
-            return $this->services[$id];
+        if ($this->has($id)) {
+            return $this->storage[$id];
         }
 
-        return $this->services[$id] = $this->make($id);
+        return $this->storage[$id] = $this->make($id);
     }
 
     /**
@@ -88,12 +133,25 @@ class Container implements ContainerInterface
         $constructor = $reflection->getConstructor();
 
         if ($constructor) {
-            $resolvedDependencies = $this->resolveDependencies($constructor, $arguments);
+            if (array_key_exists($classname, $this->beingResolved)) {
+                throw new CyclicDependencyException(
+                    sprintf(
+                        "Circular dependency detected: %s",
+                        implode(' -> ', array_keys($this->beingResolved))
+                    )
+                );
+            }
+
+            $this->beingResolved[$classname] = true;
+
+            $resolvedDependencies = $this->methodResolver->resolve($constructor, $arguments);
 
             try {
                 return $reflection->newInstance(...$resolvedDependencies);
             } catch (\ReflectionException $e) {
                 throw new ContainerException($e->getMessage());
+            } finally {
+                unset($this->beingResolved[$classname]);
             }
         }
 
@@ -118,44 +176,12 @@ class Container implements ContainerInterface
             throw new NotFoundException($e->getMessage());
         }
 
-        $resolvedDependencies = $this->resolveDependencies($reflection, $arguments);
+        $resolvedDependencies = $this->functionResolver->resolve($reflection, $arguments);
 
         if (is_callable($callable)) {
             return $callable(...$resolvedDependencies);
         }
 
         throw new ContainerException('The value passed to parameter $callable must be callable');
-    }
-
-    private function resolveDependencies(\ReflectionFunctionAbstract $function, array $arguments = []): \Generator
-    {
-        foreach ($function->getParameters() as $parameter) {
-            if (isset($arguments[$parameter->getName()])) {
-                yield $arguments[$parameter->getName()];
-            } elseif (($type = $parameter->getType()) && $type instanceof \ReflectionNamedType && !$type->isBuiltin()) {
-                $classname = $type->getName();
-
-                yield $this->get($classname);
-            } elseif ($parameter->isDefaultValueAvailable()) {
-                yield $parameter->getDefaultValue();
-            } elseif ($parameter->getDeclaringClass()) {
-                throw new \InvalidArgumentException(
-                    sprintf(
-                        "$%s in %s::%s must be typed or passed",
-                        $parameter->getName(),
-                        $parameter->getDeclaringClass()->getName(),
-                        $function->getName()
-                    )
-                );
-            } else {
-                throw new \InvalidArgumentException(
-                    sprintf(
-                        "$%s in %s must be typed or passed",
-                        $parameter->getName(),
-                        $function->getName()
-                    )
-                );
-            }
-        }
     }
 }

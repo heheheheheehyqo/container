@@ -3,7 +3,13 @@
 namespace Hyqo\Container\Test;
 
 use Hyqo\Container\Container;
-use Hyqo\Container\Test\Fixtures\{Call, ClassInterface, Foo, Bar, Baz, NoConstructor};
+use Hyqo\Container\Test\Fixtures\{Call, ClassInterface, CyclicFoo, Foo, Bar, Baz, NoConstructor};
+use Hyqo\Container\Exception\ContainerException;
+
+use Hyqo\Container\Exception\CyclicDependencyException;
+
+use function Hyqo\Container\get;
+use function Hyqo\Container\make;
 
 class  ContainerTest extends \PHPUnit\Framework\TestCase
 {
@@ -47,7 +53,7 @@ class  ContainerTest extends \PHPUnit\Framework\TestCase
 
     public function test_make_with_parameters(): void
     {
-        $baz = $this->container->make(Baz::class, ['test' => 1, 'a' => 1]);
+        $baz = $this->container->make(Baz::class, ['integer' => 1, 'notTyped' => 1]);
 
         $this->assertInstanceOf(Baz::class, $baz);
     }
@@ -109,7 +115,7 @@ class  ContainerTest extends \PHPUnit\Framework\TestCase
 
     public function test_make_interface_exception(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(ContainerException::class);
 
         $this->container->make(ClassInterface::class);
     }
@@ -130,5 +136,59 @@ class  ContainerTest extends \PHPUnit\Framework\TestCase
         $this->container->set('object', $object);
 
         $this->assertEquals($object, $this->container->get('object'));
+    }
+
+    public function test_has(): void
+    {
+        $this->container->set('foo', (object)[]);
+
+        $this->assertTrue($this->container->has('foo'));
+        $this->assertFalse($this->container->has('bar'));
+    }
+
+    public function test_configuration(): void
+    {
+        $this->container->construct(Baz::class, ['integer' => 999, 'notTyped' => 'string']);
+
+        $baz = $this->container->make(Baz::class, ['integer' => 1]);
+
+        $this->assertEquals(1, $baz->integer);
+
+        $baz = $this->container->get(Baz::class);
+
+        $this->assertEquals(999, $baz->integer);
+        $this->assertEquals('string', $baz->notTyped);
+    }
+
+    public function test_configuration_make_definition(): void
+    {
+        $this->container
+            ->construct(Foo::class, ['bar' => make(Bar::class, ['optional' => 999])]);
+
+        $foo = $this->container->make(Foo::class);
+
+        $this->assertEquals("999", $foo->print());
+
+        $this->assertFalse($this->container->has(Bar::class));
+    }
+
+    public function test_configuration_get_definition(): void
+    {
+        $this->container
+            ->construct(Bar::class, ['optional' => '999'])
+            ->construct(Foo::class, ['bar' => get(Bar::class)]);
+
+        $foo = $this->container->make(Foo::class);
+
+        $this->assertEquals("999", $foo->print());
+
+        $this->assertTrue($this->container->has(Bar::class));
+    }
+
+    public function test_cyclic(): void
+    {
+        $this->expectException(CyclicDependencyException::class);
+
+        $this->container->get(CyclicFoo::class);
     }
 }

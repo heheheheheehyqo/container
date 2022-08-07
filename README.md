@@ -1,4 +1,5 @@
 # Container
+
 ![Packagist Version](https://img.shields.io/packagist/v/hyqo/container?style=flat-square)
 ![Packagist PHP Version Support](https://img.shields.io/packagist/php-v/hyqo/container?style=flat-square)
 ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/hyqo/container/run-tests?style=flat-square)
@@ -52,7 +53,8 @@ class Bar (1) {
 
 ## Untyped arguments
 
-If class constructor has untyped arguments or type is a built-in type, you must pass an associative array of values to `make` method.
+If class constructor has untyped arguments or type is a built-in type, you must pass an associative array of values
+to `make` method.
 
 ```php
 class Foo {
@@ -76,6 +78,7 @@ class Bar
 ```
 
 Create object:
+
 ```php
 use \Hyqo\Container\Container;
 
@@ -115,4 +118,66 @@ $container = new Container();
 $container->bind(FooInterface::class, Foo::class);
 
 $bar = $container->make(Bar::class);
+```
+
+## Constructor configuration
+
+```php
+class Bar
+{
+    public $string;
+
+    public function __construct(string $string)
+    {
+        $this->string = $string;
+    }
+}
+
+class Foo {
+    private $bar;
+
+    public function __construct(Bar $bar)
+    {
+        $this->bar = $bar;
+    }
+    
+    public function print() {
+        echo $this->bar->string;
+    }
+}
+```
+
+You can specify object of `Bar`
+
+```php
+use \Hyqo\Container\Container;
+
+$container = new Container();
+$container->construct(Foo::class, ['bar'=> new Bar('Hello, world!')]);
+
+$container->make(Foo::class)->print(); //Hello, world!
+```
+
+Or you can specify arguments of `Bar` to create an object on demand
+
+```php
+use \Hyqo\Container\Container;
+
+$container = new Container();
+$container->construct(Bar::class, ['string'=>'Hello, world!']);
+
+$container->make(Foo::class)->print(); //Hello, world!
+```
+
+Another way
+
+```php
+use \Hyqo\Container\Container;
+
+use function \Hyqo\Container\make;
+
+$container = new Container();
+$container->construct(Foo::class, ['bar'=> make(Bar::class, ['string'=>'Hello, world!')])]);
+
+$container->make(Foo::class)->print(); //Hello, world!
 ```
