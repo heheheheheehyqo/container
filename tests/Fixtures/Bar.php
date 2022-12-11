@@ -4,7 +4,7 @@ namespace Hyqo\Container\Test\Fixtures;
 
 class Bar implements ClassInterface
 {
-    protected $integer;
+    protected int $integer;
 
     public function __construct(int $optional = 1)
     {

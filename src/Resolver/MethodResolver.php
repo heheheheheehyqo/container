@@ -3,6 +3,7 @@
 namespace Hyqo\Container\Resolver;
 
 use Hyqo\Container\Definition\DefinitionInterface;
+use Hyqo\Container\Exception\ContainerException;
 
 class MethodResolver extends Resolver
 {
@@ -30,7 +31,7 @@ class MethodResolver extends Resolver
             } elseif ($parameter->isDefaultValueAvailable()) {
                 yield $parameter->getDefaultValue();
             } else {
-                throw new \InvalidArgumentException(
+                throw new ContainerException(
                     sprintf(
                         "$%s in %s::%s must be typed or passed",
                         $parameter->getName(),

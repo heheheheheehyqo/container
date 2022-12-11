@@ -4,7 +4,7 @@ namespace Hyqo\Container\Exception;
 
 use Psr\Container\ContainerExceptionInterface;
 
-class CyclicDependencyException extends \RuntimeException implements ContainerExceptionInterface
+class CyclicDependencyException extends ContainerException implements ContainerExceptionInterface
 {
 
 }

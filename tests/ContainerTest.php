@@ -3,17 +3,21 @@
 namespace Hyqo\Container\Test;
 
 use Hyqo\Container\Container;
-use Hyqo\Container\Test\Fixtures\{Call, ClassInterface, CyclicFoo, Foo, Bar, Baz, NoConstructor};
+use Hyqo\Container\Test\Fixtures\{Call, ClassInterface, CyclicFoo, Foo, Bar, Baz, NoConstructor, PrivateConstructor};
 use Hyqo\Container\Exception\ContainerException;
 
 use Hyqo\Container\Exception\CyclicDependencyException;
 
+use Hyqo\Container\Exception\NotFoundException;
+use JetBrains\PhpStorm\Pure;
+use PHPUnit\Framework\TestCase;
+
 use function Hyqo\Container\get;
 use function Hyqo\Container\make;
 
-class  ContainerTest extends \PHPUnit\Framework\TestCase
+class  ContainerTest extends TestCase
 {
-    private $container;
+    private Container $container;
 
     protected function setUp(): void
     {
@@ -25,16 +29,17 @@ class  ContainerTest extends \PHPUnit\Framework\TestCase
         $this->assertInstanceOf(Container::class, $this->container);
     }
 
-    public function test_container_instance(): void
-    {
-        $this->assertEquals(Container::getInstance(), Container::getInstance());
-    }
-
     public function test_make_a_service(): void
     {
         $bar = $this->container->make(Bar::class);
 
         $this->assertInstanceOf(Bar::class, $bar);
+    }
+
+    public function test_make_a_class_with_not_public_constructor(): void
+    {
+        $this->expectException(ContainerException::class);
+        $this->container->make(PrivateConstructor::class);
     }
 
     public function test_make_a_class_without_constructor(): void
@@ -74,26 +79,34 @@ class  ContainerTest extends \PHPUnit\Framework\TestCase
 
     public function test_class_not_exists_exception(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(NotFoundException::class);
 
         $this->container->make('not_exists');
     }
 
     public function test_call_closure(): void
     {
-        $closure = function () {
+        $closure = static function () {
             return 1;
         };
 
         $result = $this->container->call($closure);
+        $this->assertEquals(1, $result);
 
+        $closure = Call::staticMethod(...);
+        $result = $this->container->call($closure);
         $this->assertEquals(1, $result);
     }
 
     public function test_call_callable_array(): void
     {
         $result = $this->container->call([Call::class, 'staticMethod']);
+        $this->assertEquals(1, $result);
 
+        $result = $this->container->call([Call::class, 'staticMethodWithRequiredParameter'], ['test' => 1]);
+        $this->assertEquals(1, $result);
+
+        $result = $this->container->call([Call::class, 'staticMethodWithDependence']);
         $this->assertEquals(1, $result);
     }
 

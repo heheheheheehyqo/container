@@ -4,13 +4,10 @@ namespace Hyqo\Container\Definition;
 
 use Hyqo\Container\Container;
 
-class GetDefinition implements DefinitionInterface
+readonly class GetDefinition implements DefinitionInterface
 {
-    private $id;
-
-    public function __construct(string $id)
+    public function __construct(public string $id)
     {
-        $this->id = $id;
     }
 
     public function resolve(Container $container)

@@ -4,12 +4,14 @@
 namespace Hyqo\Container;
 
 
+use Hyqo\Container\Exception\NotFoundException;
+
 class Reflection
 {
     /**
      * @var array<string, \ReflectionClass<object>>
      */
-    private static $reflectionClass = [];
+    private static array $reflectionClass = [];
 
     /**
      * @template T of object
@@ -25,32 +27,26 @@ class Reflection
 
             return self::$reflectionClass[$classname];
         } catch (\ReflectionException $e) {
-            throw new \InvalidArgumentException($e->getMessage());
+            throw new NotFoundException($e->getMessage());
         }
     }
 
     /**
-     * @param callable|array{object,string} $callable
-     * @throws \ReflectionException
+     * @noinspection PhpUnhandledExceptionInspection
      */
-    public function getReflectionCallable($callable): \ReflectionFunctionAbstract
+    public function getReflectionCallable(callable $callable): \ReflectionFunctionAbstract
     {
         switch (true) {
-            case (is_array($callable) && count($callable) === 2):
+            case (is_array($callable)):
                 [$class, $method] = $callable;
-
                 return new \ReflectionMethod($class, $method);
 
-            case (is_string($callable) && (substr_count($callable, '::') === 1)):
+            case (is_string($callable) && (str_contains($callable, '::'))):
                 [$class, $method] = explode('::', $callable);
-
                 return new \ReflectionMethod($class, $method);
 
-            case (is_string($callable)):
-            case ($callable instanceof \Closure):
-                return new \ReflectionFunction($callable);
             default:
-                throw new \RuntimeException();
+                return new \ReflectionFunction($callable);
         }
     }
 }
