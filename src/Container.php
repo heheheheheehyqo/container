@@ -4,7 +4,6 @@ namespace Hyqo\Container;
 
 use Hyqo\Container\Exception\ContainerException;
 use Hyqo\Container\Exception\CyclicDependencyException;
-use Hyqo\Container\Exception\NotFoundException;
 use Hyqo\Container\Resolver\FunctionResolver;
 use Hyqo\Container\Resolver\MethodResolver;
 use Psr\Container\ContainerInterface;
